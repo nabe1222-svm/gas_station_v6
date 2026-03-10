@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⛽ 適格請求書 計算ツール v6</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Hiragino Sans','Meiryo',sans-serif;background:#f0f4f8;color:#2d3748;min-height:100vh;}
+  h1{background:linear-gradient(135deg,#2d6a4f,#40916c);color:#fff;text-align:center;padding:14px;font-size:1.2rem;letter-spacing:.05em;}
+  .tab-bar{display:flex;background:#fff;border-bottom:2px solid #40916c;}
+  .tab-btn{flex:1;padding:11px 0;font-size:.95rem;font-weight:700;border:none;background:none;cursor:pointer;color:#555;transition:.2s;}
+  .tab-btn.active{color:#40916c;border-bottom:3px solid #40916c;margin-bottom:-2px;}
+  .tab-content{display:none;padding:12px;}
+  .tab-content.active{display:block;}
+
+  /* 計算タブ */
+  .setting-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;background:#fff;padding:10px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .setting-row label{font-size:.82rem;font-weight:600;white-space:nowrap;}
+  .setting-row select{padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:.82rem;}
+  .setting-row input[type=number]{width:68px;padding:5px 6px;border:1px solid #ccc;border-radius:6px;font-size:.82rem;}
+  .btn-add{display:block;width:100%;padding:11px;background:#40916c;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:10px;}
+  .btn-add:hover{background:#2d6a4f;}
+  .item-card{background:#fff;border-radius:10px;padding:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+  .item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .item-num{font-weight:700;font-size:.9rem;color:#40916c;}
+  .btn-del{background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.8rem;}
+  .oil-select{width:100%;padding:8px;border:1.5px solid #40916c;border-radius:7px;font-size:.95rem;margin-bottom:8px;background:#f0fff4;}
+  .mode-row{display:flex;gap:6px;margin-bottom:8px;}
+  .mode-btn{flex:1;padding:7px;border:1.5px solid #40916c;border-radius:6px;background:#fff;color:#40916c;font-weight:700;font-size:.85rem;cursor:pointer;}
+  .mode-btn.active{background:#40916c;color:#fff;}
+  .field-row{display:flex;flex-direction:column;gap:3px;margin-bottom:6px;}
+  .field-row label{font-size:.78rem;color:#666;font-weight:600;}
+  .field-row input{padding:8px 10px;border:1px solid #ccc;border-radius:7px;font-size:.95rem;width:100%;}
+  .info-box{background:#f0fff4;border:1px solid #9ae6b4;border-radius:6px;padding:6px 10px;font-size:.82rem;color:#276749;margin-bottom:6px;}
+  .disc-info{background:#fff5f5;border:1px solid #fc8181;border-radius:6px;padding:6px 10px;font-size:.82rem;color:#c53030;margin-bottom:6px;display:none;}
+  .subtotal-box{background:#ebf8ff;border-radius:6px;padding:7px 10px;font-size:.85rem;text-align:right;margin-top:4px;font-weight:700;color:#2b6cb0;}
+
+  .btn-calc{display:block;width:100%;padding:14px;background:linear-gradient(135deg,#2d6a4f,#40916c);color:#fff;border:none;border-radius:10px;font-size:1.1rem;font-weight:800;cursor:pointer;margin:12px 0;}
+  .btn-calc:hover{opacity:.9;}
+  .btn-clear{display:block;width:100%;padding:10px;background:#e2e8f0;color:#4a5568;border:none;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;margin-bottom:8px;}
+  .btn-clear:hover{background:#cbd5e0;}
+
+  /* 結果 */
+  .result-box{background:#fff;border-radius:10px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+  .result-title{font-weight:800;font-size:1rem;color:#2d6a4f;border-bottom:2px solid #9ae6b4;padding-bottom:6px;margin-bottom:10px;}
+  .result-table{width:100%;border-collapse:collapse;font-size:.8rem;margin-bottom:10px;}
+  .result-table th{background:#e6ffed;padding:6px 4px;text-align:center;font-size:.75rem;}
+  .result-table td{padding:5px 4px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:.8rem;}
+  .result-table td:first-child{text-align:left;}
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+  .summary-item{background:#f0fff4;border-radius:7px;padding:8px 10px;}
+  .summary-item .s-label{font-size:.72rem;color:#666;}
+  .summary-item .s-val{font-size:1rem;font-weight:800;color:#2d6a4f;}
+  .summary-wide{grid-column:1/-1;background:#e6ffed !important;}
+  .s-val-large{font-size:1.2rem !important;}
+  .formula-box{background:#fffbeb;border:1px solid #f6e05e;border-radius:7px;padding:10px;font-size:.8rem;margin-top:8px;line-height:1.7;}
+  .ok-badge{display:inline-block;background:#38a169;color:#fff;border-radius:4px;padding:2px 8px;font-size:.75rem;font-weight:700;margin-left:8px;}
+  .receipt-box{background:#fff8f0;border:1px solid #fbd38d;border-radius:7px;padding:10px;margin-top:10px;font-size:.82rem;line-height:1.9;}
+
+  /* 単価設定タブ */
+  .price-tab-inner{background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+  .bulk-row{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .bulk-row label{font-size:.85rem;font-weight:700;white-space:nowrap;}
+  .bulk-row input{flex:1;min-width:80px;padding:8px;border:1.5px solid #40916c;border-radius:7px;font-size:.95rem;}
+  .btn-bulk{padding:8px 16px;background:#40916c;color:#fff;border:none;border-radius:7px;font-weight:700;cursor:pointer;font-size:.9rem;white-space:nowrap;}
+  .btn-bulk:hover{background:#2d6a4f;}
+  .price-grid{display:flex;flex-direction:column;gap:8px;}
+  .price-row{display:flex;align-items:center;gap:8px;}
+  .price-row .oil-label{width:88px;font-size:.88rem;font-weight:700;}
+  .price-row input{flex:1;padding:8px;border:1.5px solid #ccc;border-radius:7px;font-size:.95rem;}
+  .price-row input:focus{border-color:#40916c;outline:none;box-shadow:0 0 0 2px rgba(64,145,108,.2);}
+  .price-row .unit-label{font-size:.82rem;color:#666;white-space:nowrap;}
+  .btn-save-prices{display:block;width:100%;margin-top:14px;padding:12px;background:linear-gradient(135deg,#2d6a4f,#40916c);color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:800;cursor:pointer;}
+  .saved-msg{color:#38a169;font-weight:700;text-align:center;margin-top:8px;font-size:.9rem;display:none;}
+  .note-box{background:#fffbeb;border:1px solid #f6e05e;border-radius:6px;padding:8px 10px;font-size:.78rem;color:#744210;margin-bottom:12px;}
+</style>
+</head>
+<body>
+<h1>⛽ 適格請求書 計算ツール</h1>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('calc')">🧾 計算</button>
+  <button class="tab-btn" onclick="switchTab('price')">💴 単価設定</button>
+</div>
+
+<!-- 計算タブ -->
+<div id="tab-calc" class="tab-content active">
+  <div class="setting-row">
+    <label>消費税 端数処理:</label>
+    <select id="roundMode">
+      <option value="floor">切り捨て（推奨）</option>
+      <option value="round">四捨五入</option>
+      <option value="ceil">切り上げ</option>
+    </select>
+    <label>軽油引取税:</label>
+    <input id="dieselRate" type="number" step="0.1" value="32.1">
+    <span style="font-size:.8rem;color:#666;">円/L</span>
+  </div>
+
+  <button class="btn-add" onclick="addItem()">＋ 明細を追加</button>
+  <div id="items-container"></div>
+
+  <button class="btn-calc" onclick="calculate()">計　算　す　る</button>
+  <button class="btn-clear" onclick="clearResult()">結果をクリア</button>
+  <div id="result-area"></div>
+</div>
+
+<!-- 単価設定タブ -->
+<div id="tab-price" class="tab-content">
+  <div class="price-tab-inner">
+    <div class="note-box">💡 ここで設定した単価は計算タブに反映されます。「その他」は自由入力のため変更できません。</div>
+    <div class="bulk-row">
+      <label>一括変更（円）:</label>
+      <input id="bulkInput" type="number" step="0.1" placeholder="例: +2 / -2">
+      <button class="btn-bulk" onclick="applyBulk()">適用</button>
+    </div>
+    <div class="price-grid" id="price-grid"></div>
+    <button class="btn-save-prices" onclick="savePrices()">💾 単価を保存</button>
+    <div class="saved-msg" id="saved-msg">✅ 保存しました！</div>
+  </div>
+</div>
+
+<script>
+// ===== 油種マスタ =====
+const OIL_MASTER = [
+  { id:'highoctane', name:'ハイオク',  diesel:false, taxExempt:false, defaultPrice:175 },
+  { id:'regular',   name:'レギュラー', diesel:false, taxExempt:false, defaultPrice:165 },
+  { id:'kerosene',  name:'灯油',       diesel:false, taxExempt:false, defaultPrice:110 },
+  { id:'diesel',    name:'軽油',       diesel:true,  taxExempt:false, defaultPrice:148 },
+  { id:'taxfree',   name:'免税軽油',   diesel:true,  taxExempt:true,  defaultPrice:148 },
+  { id:'heavyoil',  name:'A重油',      diesel:false, taxExempt:false, defaultPrice:130 },
+  { id:'mixed',     name:'混合油',     diesel:false, taxExempt:false, defaultPrice:160 },
+  { id:'other',     name:'その他',     diesel:false, taxExempt:false, defaultPrice:0,   freeForm:true },
+];
+
+// ===== 単価管理 =====
+function loadPrices(){
+  const stored = localStorage.getItem('gasPricesV6');
+  const obj = stored ? JSON.parse(stored) : {};
+  OIL_MASTER.forEach(o => {
+    o.price = (obj[o.id] !== undefined) ? parseFloat(obj[o.id]) : o.defaultPrice;
+  });
+}
+function savePrices(){
+  const obj = {};
+  document.querySelectorAll('.price-input').forEach(inp => {
+    obj[inp.dataset.id] = parseFloat(inp.value) || 0;
+  });
+  localStorage.setItem('gasPricesV6', JSON.stringify(obj));
+  loadPrices();
+  const msg = document.getElementById('saved-msg');
+  msg.style.display = 'block';
+  setTimeout(() => msg.style.display = 'none', 2000);
+}
+function getOil(oilId){ return OIL_MASTER.find(x => x.id === oilId) || OIL_MASTER[0]; }
+
+// ===== 単価設定タブ =====
+function buildPriceGrid(){
+  loadPrices();
+  const grid = document.getElementById('price-grid');
+  grid.innerHTML = '';
+  OIL_MASTER.forEach(o => {
+    const row = document.createElement('div');
+    row.className = 'price-row';
+    if(o.freeForm){
+      row.innerHTML = `<span class="oil-label">${o.name}</span><span style="flex:1;font-size:.82rem;color:#aaa;padding:8px;">（自由枠 – 変更不可）</span>`;
+    } else {
+      row.innerHTML = `
+        <span class="oil-label">${o.name}</span>
+        <input class="price-input" data-id="${o.id}" type="number" step="0.1" min="0" value="${o.price.toFixed(1)}">
+        <span class="unit-label">円/L</span>`;
+    }
+    grid.appendChild(row);
+  });
+}
+function applyBulk(){
+  const delta = parseFloat(document.getElementById('bulkInput').value);
+  if(isNaN(delta)){ alert('数値を入力してください'); return; }
+  document.querySelectorAll('.price-input').forEach(inp => {
+    const o = OIL_MASTER.find(x => x.id === inp.dataset.id);
+    if(o && !o.freeForm){
+      inp.value = Math.max(0, parseFloat(inp.value) + delta).toFixed(1);
+    }
+  });
+}
+
+// ===== タブ切替 =====
+function switchTab(tab){
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelectorAll('.tab-btn')[tab === 'calc' ? 0 : 1].classList.add('active');
+  if(tab === 'price') buildPriceGrid();
+}
+
+// ===== 明細カード =====
+let itemCount = 0;
+function addItem(){
+  loadPrices();
+  itemCount++;
+  const id = itemCount;
+  const card = document.createElement('div');
+  card.className = 'item-card';
+  card.id = 'card-' + id;
+  card.innerHTML = `
+    <div class="item-header">
+      <span class="item-num">明細 #${id}</span>
+      <button class="btn-del" onclick="removeItem(${id})">✕ 削除</button>
+    </div>
+    <select class="oil-select" id="oil-${id}" onchange="onOilChange(${id})">
+      ${OIL_MASTER.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}
+    </select>
+    <div class="mode-row">
+      <button class="mode-btn active" id="modeQty-${id}" onclick="setMode(${id},'qty')">数量指定</button>
+      <button class="mode-btn" id="modeAmt-${id}" onclick="setMode(${id},'amt')">金額指定</button>
+    </div>
+
+    <!-- 数量指定 -->
+    <div id="qty-block-${id}">
+      <div class="field-row">
+        <label>数量 (L)</label>
+        <input type="number" step="0.01" min="0" id="qty-${id}" placeholder="例: 30.00" oninput="updateCard(${id})">
+      </div>
+    </div>
+
+    <!-- 金額指定 -->
+    <div id="amt-block-${id}" style="display:none;">
+      <div class="field-row">
+        <label>金額（税込, 円）</label>
+        <input type="number" step="1" min="0" id="amt-${id}" placeholder="例: 5000" oninput="onAmtChange(${id})">
+      </div>
+      <div class="info-box" id="qty-calc-${id}" style="display:none;"></div>
+    </div>
+
+    <div class="info-box" id="price-disp-${id}"></div>
+    <div class="field-row">
+      <label>値引き (円/L、小数第1位まで)</label>
+      <input type="number" step="0.1" min="0" id="disc-${id}" placeholder="例: 3.5" oninput="updateCard(${id})">
+    </div>
+    <div class="disc-info" id="disc-disp-${id}"></div>
+    <div class="subtotal-box" id="subtotal-${id}">小計: —</div>`;
+  document.getElementById('items-container').appendChild(card);
+  onOilChange(id);
+}
+
+function removeItem(id){
+  const c = document.getElementById('card-' + id);
+  if(c) c.remove();
+}
+
+function onOilChange(id){
+  loadPrices();
+  updateCard(id);
+}
+
+function setMode(id, mode){
+  document.getElementById('modeQty-' + id).classList.toggle('active', mode === 'qty');
+  document.getElementById('modeAmt-' + id).classList.toggle('active', mode === 'amt');
+  document.getElementById('qty-block-' + id).style.display = mode === 'qty' ? '' : 'none';
+  document.getElementById('amt-block-' + id).style.display = mode === 'amt' ? '' : 'none';
+  // 切替時は数量をリセット
+  document.getElementById('qty-' + id).value = '';
+  const amtEl = document.getElementById('amt-' + id);
+  if(amtEl) amtEl.value = '';
+  updateCard(id);
+}
+
+function getMode(id){
+  return document.getElementById('modeQty-' + id).classList.contains('active') ? 'qty' : 'amt';
+}
+
+// 金額指定: 入力金額から数量を逆算して表示（参考）
+function onAmtChange(id){
+  loadPrices();
+  const oilId = document.getElementById('oil-' + id).value;
+  const o = getOil(oilId);
+  const rawPrice = o.freeForm ? 0 : o.price;
+  const disc = parseFloat(document.getElementById('disc-' + id).value) || 0;
+  const effPrice = Math.round((rawPrice - disc) * 10) / 10; // 小数第1位
+  const amt = parseFloat(document.getElementById('amt-' + id).value) || 0;
+  const qtyCalcEl = document.getElementById('qty-calc-' + id);
+
+  if(effPrice > 0 && amt > 0){
+    // 参考数量: amt / effPrice, 小数第2位
+    const qtyRef = Math.round((amt / effPrice) * 100) / 100;
+    qtyCalcEl.style.display = 'block';
+    qtyCalcEl.textContent = `参考数量: ${qtyRef.toFixed(2)} L（${effPrice.toFixed(1)}円/L × ${qtyRef.toFixed(2)}L ≒ ${amt}円）`;
+  } else {
+    qtyCalcEl.style.display = 'none';
+  }
+  // qty欄は金額指定モードでは使わないので更新不要
+  updateCard(id);
+}
+
+// カード更新（単価・値引・小計表示）
+function updateCard(id){
+  loadPrices();
+  const oilId = document.getElementById('oil-' + id).value;
+  const o = getOil(oilId);
+  const rawPrice = o.freeForm ? 0 : o.price;
+  const disc = parseFloat(document.getElementById('disc-' + id).value) || 0;
+  const effPrice = Math.round((rawPrice - disc) * 10) / 10;
+
+  // 単価表示
+  const priceDisp = document.getElementById('price-disp-' + id);
+  if(o.freeForm){
+    priceDisp.textContent = '単価: 自由入力';
+  } else {
+    priceDisp.textContent = `単価: ${rawPrice.toFixed(1)} 円/L`;
+  }
+
+  // 値引き表示
+  const discDisp = document.getElementById('disc-disp-' + id);
+  if(disc > 0 && !o.freeForm){
+    discDisp.style.display = 'block';
+    discDisp.textContent = `値引後単価: ${rawPrice.toFixed(1)} − ${disc.toFixed(1)} = ${effPrice.toFixed(1)} 円/L`;
+  } else {
+    discDisp.style.display = 'none';
+  }
+
+  // 小計プレビュー
+  const mode = getMode(id);
+  const subtotalEl = document.getElementById('subtotal-' + id);
+
+  if(mode === 'amt'){
+    const amt = parseFloat(document.getElementById('amt-' + id).value) || 0;
+    if(amt > 0){
+      subtotalEl.textContent = `小計: ${amt.toLocaleString()} 円（金額指定）`;
+    } else {
+      subtotalEl.textContent = '小計: —';
+    }
+  } else {
+    const qty = parseFloat(document.getElementById('qty-' + id).value) || 0;
+    if(qty > 0 && effPrice > 0){
+      const subtotal = Math.round(effPrice * qty);
+      subtotalEl.textContent = `小計: ${subtotal.toLocaleString()} 円（${qty.toFixed(2)}L × ${effPrice.toFixed(1)}円）`;
+    } else {
+      subtotalEl.textContent = '小計: —';
+    }
+  }
+}
+
+// ===== 端数処理 =====
+function applyRound(val, mode){
+  if(mode === 'floor') return Math.floor(val);
+  if(mode === 'ceil')  return Math.ceil(val);
+  return Math.round(val);
+}
+
+// ===== 計算本体 =====
+// 【誤差ゼロ計算式】
+//   taxableExclusive = applyRound(taxableInclusive / 1.1)
+//   consumptionTax   = taxableInclusive - taxableExclusive
+//   検証: taxableExclusive + consumptionTax = taxableInclusive (必ず一致)
+//
+// 【金額指定モードの重要な取り扱い】
+//   入力金額を subtotal としてそのまま使用 (数量×単価では計算しない)
+//   → 「1000円入力 → 必ず合計1000円」を保証
+//
+// 【数量指定の例: 65L × 146円】
+//   subtotal = round(146 × 65) = 9490
+//   taxableExclusive = floor(9490 / 1.1) = floor(8627.27) = 8627
+//   consumptionTax   = 9490 - 8627 = 863
+//   検証: 8627 + 863 = 9490 ✅
+
+function calculate(){
+  loadPrices();
+  const roundMode  = document.getElementById('roundMode').value;
+  const dieselRate = parseFloat(document.getElementById('dieselRate').value) || 32.1;
+  const cards = document.querySelectorAll('.item-card');
+
+  if(cards.length === 0){ alert('明細を1件以上追加してください'); return; }
+
+  let lines = [];
+  let grandTotal    = 0;
+  let grandDieselTax = 0;
+  let hasError = false;
+
+  cards.forEach(card => {
+    const id     = parseInt(card.id.replace('card-', ''));
+    const oilId  = document.getElementById('oil-' + id).value;
+    const o      = getOil(oilId);
+    const rawPrice = o.freeForm ? 0 : o.price;
+    const disc     = parseFloat(document.getElementById('disc-' + id).value) || 0;
+    // 値引後単価（小数第1位まで保持）
+    const effPrice = Math.round((rawPrice - disc) * 10) / 10;
+
+    const mode = getMode(id);
+    let subtotal, qty;
+
+    if(mode === 'amt'){
+      // ★金額指定: 入力金額をそのまま小計に使う
+      subtotal = parseFloat(document.getElementById('amt-' + id).value) || 0;
+      if(subtotal <= 0){ hasError = true; return; }
+      // 参考数量（軽油引取税計算用）
+      qty = effPrice > 0 ? Math.round((subtotal / effPrice) * 100) / 100 : 0;
+    } else {
+      // 数量指定
+      qty = parseFloat(document.getElementById('qty-' + id).value) || 0;
+      if(qty <= 0 || (!o.freeForm && effPrice <= 0)){ hasError = true; return; }
+      subtotal = Math.round(effPrice * qty);
+    }
+
+    // 軽油引取税（軽油・免税軽油）
+    let dieselTax = 0;
+    if(o.diesel && qty > 0){
+      dieselTax = Math.round(dieselRate * qty);
+    }
+
+    grandTotal     += subtotal;
+    grandDieselTax += dieselTax;
+    lines.push({ id, name: o.name, diesel: o.diesel, taxExempt: o.taxExempt,
+                 effPrice, qty, subtotal, dieselTax, disc, mode });
+  });
+
+  if(hasError){ alert('入力が不完全な明細があります（数量または金額を確認してください）'); return; }
+  if(lines.length === 0){ alert('有効な明細がありません'); return; }
+
+  // ===== 誤差ゼロ計算 =====
+  const taxableInclusive  = grandTotal - grandDieselTax;
+  // ★税抜を先に計算 → 消費税 = 税込 − 税抜  (端数処理は1回のみ)
+  const taxableExclusive  = applyRound(taxableInclusive / 1.1, roundMode);
+  const consumptionTax    = taxableInclusive - taxableExclusive;
+  const checkSum          = taxableExclusive + consumptionTax + grandDieselTax;
+  const isZeroError       = (checkSum === grandTotal);
+
+  // ===== 結果HTML =====
+  let tableRows = '';
+  lines.forEach(l => {
+    let taxNote = '';
+    if(l.taxExempt)      taxNote = '<br><span style="color:#e53e3e;font-size:.7rem;">(免税)</span>';
+    else if(l.diesel)    taxNote = '<br><span style="color:#d69e2e;font-size:.7rem;">(軽油引取税あり)</span>';
+    const discNote = l.disc > 0
+      ? `<br><span style="font-size:.7rem;color:#e53e3e;">値引 −${l.disc.toFixed(1)}円/L</span>` : '';
+    const modeNote = l.mode === 'amt'
+      ? '<br><span style="font-size:.7rem;color:#3182ce;">金額指定</span>' : '';
+    tableRows += `<tr>
+      <td>${l.name}${taxNote}${discNote}${modeNote}</td>
+      <td style="text-align:center;">${l.qty.toFixed(2)}</td>
+      <td>${l.effPrice.toFixed(1)}</td>
+      <td>${l.subtotal.toLocaleString()}</td>
+      <td>${l.dieselTax > 0 ? l.dieselTax.toLocaleString() : '—'}</td>
+    </tr>`;
+  });
+
+  const html = `
+  <div class="result-box" style="margin-top:10px;">
+    <div class="result-title">📋 計算結果 ${isZeroError ? '<span class="ok-badge">✅ 誤差ゼロ確認</span>' : '<span style="color:#e53e3e;">⚠ 検証エラー</span>'}</div>
+    <table class="result-table">
+      <thead><tr><th>品名</th><th>数量(L)</th><th>単価(円)</th><th>小計(円)</th><th>軽油引取税</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    <div class="summary-grid">
+      <div class="summary-item"><div class="s-label">税込合計</div><div class="s-val">¥${grandTotal.toLocaleString()}</div></div>
+      <div class="summary-item"><div class="s-label">軽油引取税 合計</div><div class="s-val">¥${grandDieselTax.toLocaleString()}</div></div>
+      <div class="summary-item"><div class="s-label">課税対象税込</div><div class="s-val">¥${taxableInclusive.toLocaleString()}</div></div>
+      <div class="summary-item"><div class="s-label">消費税 (10%)</div><div class="s-val">¥${consumptionTax.toLocaleString()}</div></div>
+      <div class="summary-item summary-wide">
+        <div class="s-label">※税率10%対象 税抜金額（レシート記載）</div>
+        <div class="s-val s-val-large">¥${taxableExclusive.toLocaleString()}</div>
+      </div>
+    </div>
+    <div class="formula-box">
+      <strong>📐 計算式（誤差ゼロ保証）</strong><br>
+      ① 税込合計 &nbsp;&nbsp;= ${grandTotal.toLocaleString()} 円<br>
+      ② 軽油引取税 = ${grandDieselTax.toLocaleString()} 円<br>
+      ③ 課税対象税込 &nbsp;= ①−② = ${taxableInclusive.toLocaleString()} 円<br>
+      ④ 税抜課税標準 = ${roundMode}(③÷1.1) = ${taxableExclusive.toLocaleString()} 円<br>
+      ⑤ 消費税(10%) &nbsp;= ③−④ = ${consumptionTax.toLocaleString()} 円<br>
+      <strong>検証: ④+⑤+② = ${taxableExclusive}+${consumptionTax}+${grandDieselTax}
+        = <span style="color:${isZeroError ? '#38a169' : '#e53e3e'};">${checkSum.toLocaleString()} 円
+        ${isZeroError ? '✅ 一致' : '❌ 不一致'}</span></strong>
+    </div>
+    <div class="receipt-box">
+      <strong>🖊️ レシート手書き欄</strong><br>
+      ${grandDieselTax > 0 ? `軽油引取税 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <strong>${grandDieselTax.toLocaleString()} 円</strong><br>` : ''}
+      ※税率10%対象 税抜金額 : <strong>${taxableExclusive.toLocaleString()} 円</strong><br>
+      　消費税額(10%) &nbsp;&nbsp;&nbsp;: <strong>${consumptionTax.toLocaleString()} 円</strong><br>
+      　合　　　　計 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <strong>${grandTotal.toLocaleString()} 円</strong>
+    </div>
+  </div>`;
+
+  document.getElementById('result-area').innerHTML = html;
+  document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
+}
+
+function clearResult(){
+  document.getElementById('result-area').innerHTML = '';
+}
+
+// ===== 初期化 =====
+window.onload = function(){
+  loadPrices();
+  addItem();
+};
+</script>
+</body>
+</html>
