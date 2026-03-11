@@ -211,6 +211,15 @@ function addItem(){
     <select class="oil-select" id="oil-${id}" onchange="onOilChange(${id})">
       ${OIL_MASTER.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}
     </select>
+
+    <!-- その他: 計算タブ内の単価入力欄（その他選択時のみ表示） -->
+    <div id="other-price-block-${id}" style="display:none;">
+      <div class="field-row">
+        <label>単価 (円/L)　※その他は自由入力</label>
+        <input type="number" step="0.1" min="0" id="other-price-${id}" placeholder="例: 150.0" oninput="updateCard(${id})">
+      </div>
+    </div>
+
     <div class="mode-row">
       <button class="mode-btn active" id="modeQty-${id}" onclick="setMode(${id},'qty')">数量指定</button>
       <button class="mode-btn" id="modeAmt-${id}" onclick="setMode(${id},'amt')">金額指定</button>
@@ -249,8 +258,21 @@ function removeItem(id){
   if(c) c.remove();
 }
 
+// その他選択時のみ単価入力欄を表示するヘルパー
+function getRawPrice(id, o){
+  if(o.freeForm){
+    const el = document.getElementById('other-price-' + id);
+    return el ? (parseFloat(el.value) || 0) : 0;
+  }
+  return o.price;
+}
+
 function onOilChange(id){
   loadPrices();
+  const oilId = document.getElementById('oil-' + id).value;
+  const o = getOil(oilId);
+  const block = document.getElementById('other-price-block-' + id);
+  if(block) block.style.display = o.freeForm ? '' : 'none';
   updateCard(id);
 }
 
@@ -275,7 +297,7 @@ function onAmtChange(id){
   loadPrices();
   const oilId = document.getElementById('oil-' + id).value;
   const o = getOil(oilId);
-  const rawPrice = o.freeForm ? 0 : o.price;
+  const rawPrice = getRawPrice(id, o);  // その他は入力欄から取得
   const disc = parseFloat(document.getElementById('disc-' + id).value) || 0;
   const effPrice = Math.round((rawPrice - disc) * 10) / 10; // 小数第1位
   const amt = parseFloat(document.getElementById('amt-' + id).value) || 0;
@@ -298,15 +320,21 @@ function updateCard(id){
   loadPrices();
   const oilId = document.getElementById('oil-' + id).value;
   const o = getOil(oilId);
-  const rawPrice = o.freeForm ? 0 : o.price;
+  const rawPrice = getRawPrice(id, o);  // その他は入力欄から取得
   const disc = parseFloat(document.getElementById('disc-' + id).value) || 0;
   const effPrice = Math.round((rawPrice - disc) * 10) / 10;
 
-  // 単価表示
+  // 単価表示（その他は入力欄が別にあるので非表示、他は緑ボックスに表示）
   const priceDisp = document.getElementById('price-disp-' + id);
   if(o.freeForm){
-    priceDisp.textContent = '単価: 自由入力';
+    if(rawPrice > 0){
+      priceDisp.style.display = 'block';
+      priceDisp.textContent = `単価: ${rawPrice.toFixed(1)} 円/L（その他）`;
+    } else {
+      priceDisp.style.display = 'none';
+    }
   } else {
+    priceDisp.style.display = 'block';
     priceDisp.textContent = `単価: ${rawPrice.toFixed(1)} 円/L`;
   }
 
@@ -381,7 +409,7 @@ function calculate(){
     const id     = parseInt(card.id.replace('card-', ''));
     const oilId  = document.getElementById('oil-' + id).value;
     const o      = getOil(oilId);
-    const rawPrice = o.freeForm ? 0 : o.price;
+    const rawPrice = getRawPrice(id, o);  // その他は入力欄から取得
     const disc     = parseFloat(document.getElementById('disc-' + id).value) || 0;
     // 値引後単価（小数第1位まで保持）
     const effPrice = Math.round((rawPrice - disc) * 10) / 10;
