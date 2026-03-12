@@ -89,8 +89,8 @@
   <div class="setting-row">
     <label>消費税 端数処理:</label>
     <select id="roundMode">
-      <option value="floor">切り捨て（推奨）</option>
-      <option value="round">四捨五入</option>
+      <option value="round" selected>四捨五入（推奨）</option>
+      <option value="floor">切り捨て</option>
       <option value="ceil">切り上げ</option>
     </select>
     <label>軽油引取税:</label>
@@ -378,7 +378,7 @@ function applyRound(val, mode){
 
 // ===== 計算本体 =====
 // 【誤差ゼロ計算式】
-//   taxableExclusive = applyRound(taxableInclusive / 1.1)
+//   taxableExclusive = applyRound(taxableInclusive * 10 / 11)  ★/1.1の代わりに×10÷11を使用（浮動小数点誤差回避）
 //   consumptionTax   = taxableInclusive - taxableExclusive
 //   検証: taxableExclusive + consumptionTax = taxableInclusive (必ず一致)
 //
@@ -388,7 +388,7 @@ function applyRound(val, mode){
 //
 // 【数量指定の例: 65L × 146円】
 //   subtotal = round(146 × 65) = 9490
-//   taxableExclusive = floor(9490 / 1.1) = floor(8627.27) = 8627
+//   taxableExclusive = round(9490 * 10 / 11) = round(8627.27) = 8627
 //   consumptionTax   = 9490 - 8627 = 863
 //   検証: 8627 + 863 = 9490 ✅
 
@@ -448,7 +448,8 @@ function calculate(){
   // ===== 誤差ゼロ計算 =====
   const taxableInclusive  = grandTotal - grandDieselTax;
   // ★税抜を先に計算 → 消費税 = 税込 − 税抜  (端数処理は1回のみ)
-  const taxableExclusive  = applyRound(taxableInclusive / 1.1, roundMode);
+  // ★÷1.1の代わりに×10÷11で計算（浮動小数点誤差回避: 400950/1.1=364499.99…→floor=364499のバグを防ぐ）
+  const taxableExclusive  = applyRound(taxableInclusive * 10 / 11, roundMode);
   const consumptionTax    = taxableInclusive - taxableExclusive;
   const checkSum          = taxableExclusive + consumptionTax + grandDieselTax;
   const isZeroError       = (checkSum === grandTotal);
@@ -494,7 +495,7 @@ function calculate(){
       ① 税込合計 &nbsp;&nbsp;= ${grandTotal.toLocaleString()} 円<br>
       ② 軽油引取税 = ${grandDieselTax.toLocaleString()} 円<br>
       ③ 課税対象税込 &nbsp;= ①−② = ${taxableInclusive.toLocaleString()} 円<br>
-      ④ 税抜課税標準 = ${roundMode}(③÷1.1) = ${taxableExclusive.toLocaleString()} 円<br>
+      ④ 税抜課税標準 = ${roundMode}(③×10÷11) = ${taxableExclusive.toLocaleString()} 円<br>
       ⑤ 消費税(10%) &nbsp;= ③−④ = ${consumptionTax.toLocaleString()} 円<br>
       <strong>検証: ④+⑤+② = ${taxableExclusive}+${consumptionTax}+${grandDieselTax}
         = <span style="color:${isZeroError ? '#38a169' : '#e53e3e'};">${checkSum.toLocaleString()} 円
