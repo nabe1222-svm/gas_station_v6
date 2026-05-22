@@ -25,7 +25,10 @@
   .item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
   .item-num{font-weight:700;font-size:.9rem;color:#40916c;}
   .btn-del{background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.8rem;}
-  .oil-select{width:100%;padding:8px;border:1.5px solid #40916c;border-radius:7px;font-size:.95rem;margin-bottom:8px;background:#f0fff4;}
+  .oil-select{display:none;}
+  .oil-btn-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+  .oil-btn{padding:8px 4px;border:1.5px solid #40916c;border-radius:8px;background:#fff;color:#2d6a4f;font-size:.8rem;font-weight:700;cursor:pointer;line-height:1.2;}
+  .oil-btn.active{background:#40916c;color:#fff;box-shadow:0 2px 6px rgba(64,145,108,.25);}
   .mode-row{display:flex;gap:6px;margin-bottom:8px;}
   .mode-btn{flex:1;padding:7px;border:1.5px solid #40916c;border-radius:6px;background:#fff;color:#40916c;font-weight:700;font-size:.85rem;cursor:pointer;}
   .mode-btn.active{background:#40916c;color:#fff;}
@@ -247,6 +250,9 @@ function addItem(){
     <select class="oil-select" id="oil-${id}" onchange="onOilChange(${id})">
       ${OIL_MASTER.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}
     </select>
+    <div class="oil-btn-grid" id="oil-btn-grid-${id}">
+      ${OIL_MASTER.map((o, idx) => `<button type="button" class="oil-btn ${idx===0?'active':''}" data-oil="${o.id}" onclick="setOil(${id}, '${o.id}')">${o.name}</button>`).join('')}
+    </div>
 
     <!-- その他: 計算タブ内の単価入力欄（その他選択時のみ表示） -->
     <div id="other-price-block-${id}" style="display:none;">
@@ -303,12 +309,30 @@ function getRawPrice(id, o){
   return o.price;
 }
 
+function setOil(id, oilId){
+  const select = document.getElementById('oil-' + id);
+  if(select) select.value = oilId;
+  const grid = document.getElementById('oil-btn-grid-' + id);
+  if(grid){
+    grid.querySelectorAll('.oil-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.oil === oilId);
+    });
+  }
+  onOilChange(id);
+}
+
 function onOilChange(id){
   loadPrices();
   const oilId = document.getElementById('oil-' + id).value;
   const o = getOil(oilId);
   const block = document.getElementById('other-price-block-' + id);
   if(block) block.style.display = o.freeForm ? '' : 'none';
+  const grid = document.getElementById('oil-btn-grid-' + id);
+  if(grid){
+    grid.querySelectorAll('.oil-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.oil === oilId);
+    });
+  }
   updateCard(id);
 }
 
@@ -466,9 +490,9 @@ function calculate(){
       subtotal = Math.round(effPrice * qty);
     }
 
-    // 軽油引取税（軽油・免税軽油）
+    // 軽油引取税（軽油のみ。免税軽油は非課税）
     let dieselTax = 0;
-    if(o.diesel && qty > 0){
+    if(o.diesel && !o.taxExempt && qty > 0){
       dieselTax = Math.round(dieselRate * qty);
     }
 
@@ -495,7 +519,7 @@ function calculate(){
   lines.forEach(l => {
     let taxNote = '';
     if(l.taxExempt)      taxNote = '<br><span style="color:#e53e3e;font-size:.7rem;">(免税)</span>';
-    else if(l.diesel)    taxNote = '<br><span style="color:#d69e2e;font-size:.7rem;">(軽油引取税あり)</span>';
+    else if(l.diesel && !l.taxExempt)    taxNote = '<br><span style="color:#d69e2e;font-size:.7rem;">(軽油引取税あり)</span>';
     const discNote = l.disc > 0
       ? `<br><span style="font-size:.7rem;color:#e53e3e;">値引 −${l.disc.toFixed(1)}円/L</span>` : '';
     const modeNote = l.mode === 'amt'
